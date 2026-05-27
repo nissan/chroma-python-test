@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+*.so
+
+# Model cache (large, reproduced at build time)
+api/models/
+*/models/
+
+# Node
+node_modules/
+frontend/dist/
+.pnp/
+.pnp.js
+
+# Env
+.env
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+*.log

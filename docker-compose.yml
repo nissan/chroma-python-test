@@ -1,0 +1,52 @@
+networks:
+  rag-network:
+    driver: bridge
+
+volumes:
+  chroma-data:
+
+services:
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8030:8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+      - ALLOW_RESET=TRUE
+      - CHROMA_HOST_PORT=8000
+    networks:
+      - rag-network
+    restart: unless-stopped
+
+  api:
+    build: ./api
+    ports:
+      - "8040:8000"
+    depends_on:
+      - chromadb
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    environment:
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+    networks:
+      - rag-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        - VITE_API_URL=http://localhost:8040
+    ports:
+      - "3010:3000"
+    depends_on:
+      - api
+    networks:
+      - rag-network
+    restart: unless-stopped
