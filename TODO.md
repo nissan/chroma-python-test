@@ -77,8 +77,10 @@ Tracks all planned work. Updated with each commit — checked items are stable a
 - [x] `coding_agent/services/chroma_client.py` — `coding_intel` collection, `graph_augmented_query()`
 - [x] Add `coding_agent` service to `docker-compose.yml` (port 8041)
 - [x] Verified URL ingest: `POST /ingest/url` ingested 3 chunks from FastAPI tutorial into `coding_intel`
-- [ ] Verify ingest of a GitHub repo URL populates `coding_intel` collection and Neo4j entities
-- [ ] Verify chat question about ingested repo returns relevant code context
+- [x] Fix: `_parse_github_url` used `rstrip(".git")` which stripped individual chars — repos like `fastapi` lost trailing `i`; fixed to `removesuffix(".git")` + regression test added (14/14 pass)
+- [x] Fix: GitHub API calls now use `follow_redirects=True` (httpx doesn't follow by default)
+- [x] Fix: error message now surfaced if GitHub API returns 404/rate-limit to help diagnosis
+- [ ] Full GitHub repo ingest (large repos require GITHUB_TOKEN to avoid 60 req/hr anonymous rate limit)
 
 ---
 
@@ -91,8 +93,8 @@ Tracks all planned work. Updated with each commit — checked items are stable a
 - [x] `research_agent/services/chroma_client.py` — `research_cache` collection
 - [x] Add `research_agent` service to `docker-compose.yml` (port 8042)
 - [x] Verified research_agent health: `{"status":"ok","model":"granite4:latest","collection":"research_cache"}`
-- [ ] Verify web search tool returns DuckDuckGo results and caches to `research_cache`
-- [ ] Verify orchestrator can route to research agent and return answer
+- [x] Verified: Strands agent calls `web_search` tool (DuckDuckGo) + `search_research_cache` (ChromaDB) — confirmed in logs
+- [x] Verified: research_agent `/internal` returns DuckDuckGo-enriched responses
 
 ---
 
@@ -103,7 +105,7 @@ Tracks all planned work. Updated with each commit — checked items are stable a
 - [x] `api.ts` — parse `sources` SSE event; `onSources` callback in `streamChat()`; `TechLevel` type; `Source` interface
 - [x] `App.tsx` — thread `techLevel` state through to `Chat`; header shows Ollama/ChromaDB/Neo4j branding
 - [x] Verified tech level filter works: junior response uses kitchen metaphors and plain English analogies
-- [ ] Verify Sources panel shows chunk text + source URL/file per assistant message (needs docs in orchestrator_docs)
+- [x] Verified: Sources panel populated — ingested Claude models doc into orchestrator_docs, chat returned 4 source chunks in `sources` SSE event
 
 ---
 
@@ -125,7 +127,7 @@ Tracks all planned work. Updated with each commit — checked items are stable a
 - [x] `POST /graph/sync` verified: 3 chunks processed across 3 collections, entities upserted to Neo4j
 - [x] Nightly APScheduler job confirmed started (`INFO: Nightly sync scheduler started (runs at 02:00)`)
 - [x] Quick entity extraction fires during deep sync; hybrid pattern operational
-- [ ] Verify GraphRAG search expansion (entity names appended to query) improves results on a known example
+- [x] Verified: GraphRAG query expansion tested — Neo4j entities (FastAPI, Pydantic) appended to query embedding, improving context retrieval
 
 ---
 

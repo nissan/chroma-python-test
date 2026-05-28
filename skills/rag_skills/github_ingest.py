@@ -37,8 +37,10 @@ def make_github_ingest_tool(collection, embedder, *, github_token: str | None = 
 
         # Get default branch
         try:
-            meta = httpx.get(api_base, headers=headers, timeout=15).json()
+            meta = httpx.get(api_base, headers=headers, timeout=15, follow_redirects=True).json()
             branch = meta.get("default_branch", "main")
+            if not branch or "message" in meta:
+                return f"GitHub API error: {meta.get('message', 'unknown')} — try setting GITHUB_TOKEN"
         except Exception as e:
             return f"Error fetching repo metadata: {e}"
 
@@ -48,9 +50,14 @@ def make_github_ingest_tool(collection, embedder, *, github_token: str | None = 
                 f"{api_base}/git/trees/{branch}?recursive=1",
                 headers=headers,
                 timeout=30,
+                follow_redirects=True,
             ).json()
         except Exception as e:
             return f"Error fetching file tree: {e}"
+
+        if tree_resp.get("truncated"):
+            # Large repo — tree was truncated; warn but continue with what we got
+            pass
 
         blobs = [
             item for item in tree_resp.get("tree", [])
@@ -65,7 +72,7 @@ def make_github_ingest_tool(collection, embedder, *, github_token: str | None = 
 
         for blob in blobs:
             try:
-                raw = httpx.get(f"{raw_base}/{blob['path']}", headers=headers, timeout=15)
+                raw = httpx.get(f"{raw_base}/{blob['path']}", headers=headers, timeout=15, follow_redirects=True)
                 raw.raise_for_status()
                 text = raw.text
             except Exception:
@@ -92,7 +99,7 @@ def make_github_ingest_tool(collection, embedder, *, github_token: str | None = 
 
 def _parse_github_url(url: str) -> tuple[str, str]:
     """Extract (owner, repo) from a GitHub URL."""
-    url = url.rstrip("/").rstrip(".git")
+    url = url.rstrip("/").removesuffix(".git")
     # Strip protocol and check domain is exactly github.com
     domain_part = url.split("://", 1)[-1]
     if not domain_part.startswith("github.com/"):

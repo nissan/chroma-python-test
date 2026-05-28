@@ -7,6 +7,9 @@ def test_parse_github_url():
     assert _parse_github_url("https://github.com/owner/repo.git") == ("owner", "repo")
     assert _parse_github_url("https://github.com/owner/repo/") == ("owner", "repo")
     assert _parse_github_url("https://notgithub.com/x/y") == ("", "")
+    # Repos whose names end with letters in ".git" must not be truncated
+    assert _parse_github_url("https://github.com/fastapi/fastapi") == ("fastapi", "fastapi")
+    assert _parse_github_url("https://github.com/tiangolo/fastapi") == ("tiangolo", "fastapi")
 
 
 def test_make_github_ingest_tool_returns_tool():
