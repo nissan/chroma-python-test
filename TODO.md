@@ -14,14 +14,16 @@ Tracks all planned work. Updated with each commit — checked items are stable a
 
 ## Phase 1 — Shared Skills Package
 
-- [ ] Create `skills/` directory with `pyproject.toml` (`rag-skills` package)
-- [ ] `skills/rag_skills/url_scrape.py` — Strands `@tool`: httpx + BeautifulSoup scrape
-- [ ] `skills/rag_skills/pdf_ingest.py` — Strands `@tool`: PyMuPDF bytes → chunks
-- [ ] `skills/rag_skills/docx_ingest.py` — Strands `@tool`: python-docx bytes → chunks
-- [ ] `skills/rag_skills/github_ingest.py` — Strands `@tool`: fetch repo tree + raw files → chunks
-- [ ] `skills/rag_skills/youtube_ingest.py` — Strands `@tool`: yt-dlp VTT → text chunks
-- [ ] `skills/rag_skills/web_search.py` — Strands `@tool`: DuckDuckGo `DDGS().text()` wrapper
-- [ ] Unit-test each skill independently (`pytest skills/tests/`)
+- [x] Create `skills/` directory with `pyproject.toml` (`rag-skills` package)
+- [x] `skills/rag_skills/url_scrape.py` — Strands `@tool`: httpx + BeautifulSoup scrape
+- [x] `skills/rag_skills/pdf_ingest.py` — Strands `@tool` factory: PyMuPDF bytes → chunks
+- [x] `skills/rag_skills/docx_ingest.py` — Strands `@tool` factory: python-docx bytes → chunks
+- [x] `skills/rag_skills/url_ingest.py` — Strands `@tool` factory: URL → chunks (persistent ingestion)
+- [x] `skills/rag_skills/github_ingest.py` — Strands `@tool` factory: fetch repo tree + raw files → chunks
+- [x] `skills/rag_skills/youtube_ingest.py` — Strands `@tool` factory: yt-dlp VTT → text chunks
+- [x] `skills/rag_skills/web_search.py` — Strands `@tool`: DuckDuckGo `DDGS().text()` wrapper
+- [x] `skills/rag_skills/_chunker.py` — shared chunking utility used by all ingest skills
+- [x] Unit-test each skill independently (14/14 passing)
 
 ---
 
