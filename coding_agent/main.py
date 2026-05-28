@@ -1,7 +1,7 @@
 import os
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastembed import TextEmbedding
 
@@ -42,5 +42,15 @@ app.include_router(ingest_router, prefix="/ingest", tags=["ingest"])
 
 
 @app.get("/health")
-async def health():
-    return {"status": "ok", "model": settings.ollama_model, "collection": settings.chroma_collection}
+async def health(req: Request):
+    neo4j_status = "ok"
+    try:
+        req.app.state.neo4j.verify_connectivity()
+    except Exception:
+        neo4j_status = "unavailable"
+    return {
+        "status": "ok",
+        "model": settings.ollama_model,
+        "collection": settings.chroma_collection,
+        "neo4j": neo4j_status,
+    }
