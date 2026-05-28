@@ -41,6 +41,8 @@ class Neo4jClient:
             )
 
     def upsert_entity(self, name: str, entity_type: str, doc_id: str, collection: str):
+        if not name:
+            return
         with self._driver.session() as s:
             s.run(
                 """
@@ -62,6 +64,8 @@ class Neo4jClient:
         confidence: float,
         source_chunk_id: str = "",
     ):
+        if not from_entity or not to_entity:
+            return
         with self._driver.session() as s:
             s.run(
                 """

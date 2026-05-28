@@ -47,12 +47,14 @@ async def run_deep_sync(neo4j: Neo4jClient):
                 )
                 neo4j.upsert_document(doc_id, source, source, col_name)
                 for ent in entities:
-                    neo4j.upsert_entity(ent["name"], ent.get("type", "concept"), doc_id, col_name)
+                    if ent.get("name"):
+                        neo4j.upsert_entity(ent["name"], ent.get("type", "concept"), doc_id, col_name)
                 for rel in relationships:
-                    neo4j.upsert_relationship(
-                        rel["from"], rel["to"], rel.get("type", "related_to"),
-                        rel.get("confidence", 0.8), chunk_id,
-                    )
+                    if rel.get("from") and rel.get("to"):
+                        neo4j.upsert_relationship(
+                            rel["from"], rel["to"], rel.get("type", "related_to"),
+                            rel.get("confidence", 0.8), chunk_id,
+                        )
                 total_processed += 1
 
             offset += batch_size
