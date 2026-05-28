@@ -1,0 +1,11 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.3
+pydantic-settings==2.9.1
+httpx==0.28.1
+neo4j==5.28.1
+apscheduler==3.11.0
+fastembed==0.4.2
+chromadb
+langchain-text-splitters==0.3.8
+tiktoken==0.9.0
+starlette==0.46.2

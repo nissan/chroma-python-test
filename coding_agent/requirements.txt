@@ -1,0 +1,20 @@
+fastapi==0.115.12
+uvicorn[standard]==0.34.3
+pydantic-settings==2.9.1
+sse-starlette==2.3.6
+httpx==0.28.1
+chromadb
+fastembed==0.4.2
+langchain-text-splitters==0.3.8
+tiktoken==0.9.0
+strands-agents>=1.0.0
+ollama>=0.4.0
+neo4j==5.28.1
+# Skills deps installed via: pip install -e ./skills[youtube]
+yt-dlp>=2024.0.0
+python-multipart==0.0.20
+pymupdf==1.24.14
+python-docx==1.1.2
+beautifulsoup4==4.12.3
+lxml==5.3.0
+duckduckgo-search>=7.0.0

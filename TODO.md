@@ -29,54 +29,54 @@ Tracks all planned work. Updated with each commit — checked items are stable a
 
 ## Phase 2 — Infrastructure: Neo4j + docker-compose updates
 
-- [ ] Add `neo4j:5` service to `docker-compose.yml` (ports 7474, 7687; volume `neo4j-data`)
-- [ ] Add `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` to `.env.example`
-- [ ] Add per-agent model vars: `OLLAMA_MODEL_ORCHESTRATOR`, `OLLAMA_MODEL_CODING`, `OLLAMA_MODEL_RESEARCH`
-- [ ] Add `CODING_AGENT_URL`, `RESEARCH_AGENT_URL`, `GRAPH_WORKER_URL` to `.env.example`
-- [ ] Add `GITHUB_TOKEN` to `.env.example` (optional, raises GitHub API rate limit to 5000/hr)
-- [ ] Verify `neo4j` container starts and browser console accessible at `http://localhost:7474`
+- [x] Add `neo4j:4.4` service to `docker-compose.yml` (ports 7475/7688 remapped to avoid conflicts; platform: linux/amd64; Bolt-only healthcheck)
+- [x] Add `NEO4J_URI`, `NEO4J_USER`, `NEO4J_PASSWORD` to `.env.example`
+- [x] Add per-agent model vars: `OLLAMA_MODEL_ORCHESTRATOR`, `OLLAMA_MODEL_CODING`, `OLLAMA_MODEL_RESEARCH`
+- [x] Add `CODING_AGENT_URL`, `RESEARCH_AGENT_URL`, `GRAPH_WORKER_URL` to `.env.example`
+- [x] Add `GITHUB_TOKEN` to `.env.example` (optional, raises GitHub API rate limit to 5000/hr)
+- [x] Neo4j container healthy (Bolt at bolt://localhost:7688; HTTP disabled)
 
 ---
 
 ## Phase 3 — graph_worker service
 
-- [ ] `graph_worker/Dockerfile` (python:3.12-slim, installs skills package)
-- [ ] `graph_worker/requirements.txt` (neo4j, apscheduler, httpx, fastembed, strands-agents)
-- [ ] `graph_worker/services/neo4j_client.py` — `upsert_entity()`, `upsert_relationship()`, `query_related_entities()`
-- [ ] `graph_worker/services/extractor.py` — Ollama LLM call to extract `(entity, type, relationship, entity)` triples from text chunks
-- [ ] `graph_worker/services/scheduler.py` — APScheduler `CronTrigger(hour=2)` nightly deep sync
-- [ ] `graph_worker/routers/sync.py` — `POST /graph/sync` manual trigger endpoint
-- [ ] `graph_worker/main.py` — FastAPI + lifespan starts scheduler
-- [ ] Add `graph_worker` service to `docker-compose.yml` (port 8043, depends_on: neo4j)
-- [ ] Verify `POST /graph/sync` runs extraction and populates Neo4j nodes/relationships
+- [x] `graph_worker/Dockerfile` (python:3.12-slim, installs skills package; starlette==0.46.2 re-pinned after skills install)
+- [x] `graph_worker/requirements.txt` (neo4j, apscheduler, httpx, fastembed, starlette==0.46.2)
+- [x] `graph_worker/services/neo4j_client.py` — `upsert_entity()`, `upsert_relationship()`, `query_related_entities()`
+- [x] `graph_worker/services/extractor.py` — Ollama LLM call to extract `(entity, type, relationship, entity)` triples from text chunks
+- [x] `graph_worker/services/scheduler.py` — APScheduler `CronTrigger(hour=2)` nightly deep sync
+- [x] `graph_worker/routers/sync.py` — `POST /graph/sync` manual trigger endpoint
+- [x] `graph_worker/main.py` — FastAPI + lifespan starts scheduler
+- [x] Add `graph_worker` service to `docker-compose.yml` (port 8043, depends_on: neo4j healthy)
+- [x] Verified `POST /graph/sync` runs extraction and populates Neo4j nodes (3 chunks processed)
 
 ---
 
 ## Phase 4 — orchestrator service (rename + upgrade from api)
 
-- [ ] Rename `api/` → `orchestrator/`
-- [ ] `orchestrator/Dockerfile` — add `COPY ../skills ./skills && pip install -e ./skills`
-- [ ] `orchestrator/requirements.txt` — add `strands-agents`, `strands-agents-tools`
-- [ ] `orchestrator/agent.py` — Strands `Agent` with `route_to_coding_agent` and `route_to_research_agent` tools
-- [ ] `orchestrator/services/neo4j_client.py` — `query_related_entities()` for GraphRAG expansion
-- [ ] `orchestrator/services/chroma_client.py` — add `graph_augmented_query()` using Neo4j entity expansion
-- [ ] `orchestrator/routers/chat.py` — add `tech_level` param; apply level-filter prompt; emit `sources` SSE event before `[DONE]`
-- [ ] `orchestrator/config.py` — add `coding_agent_url`, `research_agent_url`, `graph_worker_url`, `neo4j_*` settings
-- [ ] Update `docker-compose.yml`: rename `api` → `orchestrator`, build `./orchestrator`
-- [ ] Verify orchestrator health check and basic chat still works before adding routing
+- [x] Renamed `api/` → `orchestrator/`
+- [x] `orchestrator/Dockerfile` — installs skills package; starlette==0.46.2 re-pinned
+- [x] `orchestrator/requirements.txt` — added `strands-agents`
+- [x] `orchestrator/agent.py` — Strands `Agent` with `search_knowledge_base`, `call_coding_agent`, `call_research_agent` tools
+- [x] `orchestrator/services/neo4j_client.py` — `query_related_entities()` for GraphRAG expansion
+- [x] `orchestrator/services/chroma_client.py` — added `graph_augmented_query()` using Neo4j entity expansion
+- [x] `orchestrator/routers/chat.py` — added `tech_level` param; level-filter prompt suffix; `sources` SSE event before `[DONE]`; `/internal` non-SSE endpoint
+- [x] `orchestrator/config.py` — added `coding_agent_url`, `research_agent_url`, `graph_worker_url`, `neo4j_*` settings
+- [x] Updated `docker-compose.yml`: renamed `api` → `orchestrator`; build `./orchestrator`
+- [x] Verified orchestrator health: `{"status":"ok","model":"granite4:latest","collection":"orchestrator_docs","ollama_reachable":true,"neo4j":"ok"}`
 
 ---
 
 ## Phase 5 — coding_agent service
 
-- [ ] `coding_agent/Dockerfile` (installs skills package + yt-dlp + ffmpeg via apt)
-- [ ] `coding_agent/requirements.txt` (strands-agents, yt-dlp)
-- [ ] `coding_agent/agent.py` — registers `github_ingest`, `youtube_ingest`, `url_scrape`, `pdf_ingest` from `rag_skills`; adds `search_collection` tool over `coding_intel` ChromaDB collection
-- [ ] `coding_agent/routers/ingest.py` — `POST /ingest/github`, `POST /ingest/youtube`, `POST /ingest/url`
-- [ ] `coding_agent/routers/chat.py` — `POST /chat` SSE + `POST /chat/internal` (non-SSE, for orchestrator calls)
-- [ ] `coding_agent/services/chroma_client.py` — `coding_intel` collection, `graph_augmented_query()`
-- [ ] `coding_agent/services/neo4j_client.py` — trigger quick entity extraction after each ingest
-- [ ] Add `coding_agent` service to `docker-compose.yml` (port 8041)
+- [x] `coding_agent/Dockerfile` (installs skills[youtube] + ffmpeg; starlette==0.46.2 re-pinned)
+- [x] `coding_agent/requirements.txt` (strands-agents, yt-dlp)
+- [x] `coding_agent/agent.py` — registers `github_ingest`, `youtube_ingest`, `url_ingest`, `pdf_ingest` from `rag_skills`; `search_code_knowledge` tool over `coding_intel` collection
+- [x] `coding_agent/routers/ingest.py` — `GET /ingest`, `POST /ingest/github`, `POST /ingest/youtube`, `POST /ingest/url`, `POST /ingest/file`, `DELETE /ingest/{doc_id}`
+- [x] `coding_agent/routers/chat.py` — `POST /chat` SSE + `POST /chat/internal`
+- [x] `coding_agent/services/chroma_client.py` — `coding_intel` collection, `graph_augmented_query()`
+- [x] Add `coding_agent` service to `docker-compose.yml` (port 8041)
+- [x] Verified URL ingest: `POST /ingest/url` ingested 3 chunks from FastAPI tutorial into `coding_intel`
 - [ ] Verify ingest of a GitHub repo URL populates `coding_intel` collection and Neo4j entities
 - [ ] Verify chat question about ingested repo returns relevant code context
 
@@ -84,12 +84,13 @@ Tracks all planned work. Updated with each commit — checked items are stable a
 
 ## Phase 6 — research_agent service
 
-- [ ] `research_agent/Dockerfile` (installs skills package)
-- [ ] `research_agent/requirements.txt` (strands-agents)
-- [ ] `research_agent/agent.py` — registers `web_search`, `url_scrape` from `rag_skills`; adds `search_collection` over `research_cache` collection
-- [ ] `research_agent/routers/chat.py` — `POST /chat` SSE + `POST /chat/internal`
-- [ ] `research_agent/services/chroma_client.py` — `research_cache` collection
-- [ ] Add `research_agent` service to `docker-compose.yml` (port 8042)
+- [x] `research_agent/Dockerfile` (installs skills package; starlette==0.46.2 re-pinned)
+- [x] `research_agent/requirements.txt` (strands-agents)
+- [x] `research_agent/agent.py` — registers `web_search`, `url_scrape`, `url_ingest` from `rag_skills`; `search_research_cache` tool
+- [x] `research_agent/routers/chat.py` — `POST /chat` SSE + `POST /chat/internal`
+- [x] `research_agent/services/chroma_client.py` — `research_cache` collection
+- [x] Add `research_agent` service to `docker-compose.yml` (port 8042)
+- [x] Verified research_agent health: `{"status":"ok","model":"granite4:latest","collection":"research_cache"}`
 - [ ] Verify web search tool returns DuckDuckGo results and caches to `research_cache`
 - [ ] Verify orchestrator can route to research agent and return answer
 
@@ -97,12 +98,12 @@ Tracks all planned work. Updated with each commit — checked items are stable a
 
 ## Phase 7 — Frontend updates
 
-- [ ] `TechLevelSelector.tsx` — Deep / Mid / Junior dropdown in chat header; state lifted to `App.tsx`
-- [ ] `Chat.tsx` — pass `tech_level` in POST /chat body; render collapsible `<Sources>` panel per assistant message
-- [ ] `api.ts` — parse `sources` SSE event (separate from token stream); expose as `onSources` callback in `streamChat()`
-- [ ] `App.tsx` — thread `techLevel` state through to `Chat`
-- [ ] Verify tech level selector persists across messages in a session
-- [ ] Verify Sources panel shows chunk text + source URL/file per assistant message
+- [x] `TechLevelSelector.tsx` — Deep / Mid / Junior toggle buttons in chat header; state lifted to `App.tsx`
+- [x] `Chat.tsx` — pass `tech_level` in POST /chat body; render collapsible `<Sources>` panel per assistant message (toggle open/close)
+- [x] `api.ts` — parse `sources` SSE event; `onSources` callback in `streamChat()`; `TechLevel` type; `Source` interface
+- [x] `App.tsx` — thread `techLevel` state through to `Chat`; header shows Ollama/ChromaDB/Neo4j branding
+- [x] Verified tech level filter works: junior response uses kitchen metaphors and plain English analogies
+- [ ] Verify Sources panel shows chunk text + source URL/file per assistant message (needs docs in orchestrator_docs)
 
 ---
 

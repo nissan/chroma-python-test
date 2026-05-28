@@ -1,8 +1,16 @@
 const API_BASE = (import.meta.env.VITE_API_URL as string) ?? 'http://localhost:8000'
 
+export type TechLevel = 'deep' | 'mid' | 'junior'
+
 export interface Message {
   role: 'user' | 'assistant'
   content: string
+}
+
+export interface Source {
+  title: string
+  url?: string
+  chunk?: string
 }
 
 export interface DocumentRecord {
@@ -14,7 +22,9 @@ export interface DocumentRecord {
 
 export async function* streamChat(
   message: string,
-  history: Message[]
+  history: Message[],
+  techLevel: TechLevel = 'mid',
+  onSources?: (sources: Source[]) => void
 ): AsyncGenerator<string, void, unknown> {
   const response = await fetch(`${API_BASE}/chat`, {
     method: 'POST',
@@ -22,7 +32,7 @@ export async function* streamChat(
       'Content-Type': 'application/json',
       Accept: 'text/event-stream',
     },
-    body: JSON.stringify({ message, history }),
+    body: JSON.stringify({ message, history, tech_level: techLevel }),
   })
 
   if (!response.ok) {
@@ -45,8 +55,13 @@ export async function* streamChat(
       if (data === '[DONE]') return
       try {
         const parsed = JSON.parse(data)
-        if (parsed.content) yield parsed.content as string
-        if (parsed.error) throw new Error(parsed.error as string)
+        if (parsed.type === 'sources' && onSources) {
+          onSources(parsed.sources as Source[])
+        } else if (parsed.content) {
+          yield parsed.content as string
+        } else if (parsed.error) {
+          throw new Error(parsed.error as string)
+        }
       } catch (e) {
         if (e instanceof SyntaxError) continue
         throw e

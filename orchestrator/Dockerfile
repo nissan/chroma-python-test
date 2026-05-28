@@ -1,0 +1,23 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && rm -rf /var/lib/apt/lists/*
+
+ENV FASTEMBED_CACHE_PATH=/app/models
+
+COPY orchestrator/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install shared skills package
+COPY skills ./skills
+RUN pip install --no-cache-dir -e ./skills && pip install --no-cache-dir "starlette==0.46.2"
+
+# Pre-download embedding model
+COPY orchestrator/download_models.py .
+RUN python download_models.py
+
+COPY orchestrator/ .
+
+EXPOSE 8000
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

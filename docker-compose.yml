@@ -4,6 +4,8 @@ networks:
 
 volumes:
   chroma-data:
+  neo4j-data:
+  neo4j-logs:
 
 services:
   chromadb:
@@ -21,12 +23,65 @@ services:
       - rag-network
     restart: unless-stopped
 
-  api:
-    build: ./api
+  neo4j:
+    image: neo4j:4.4
+    platform: linux/amd64
+    user: "7474:7474"
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    volumes:
+      - neo4j-data:/data
+      - neo4j-logs:/logs
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_dbms_memory_heap_initial__size=512m
+      - NEO4J_dbms_memory_heap_max__size=1G
+      - NEO4J_dbms_connector_http_enabled=false
+      - NEO4J_dbms_connector_https_enabled=false
+    networks:
+      - rag-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-a", "bolt://localhost:7687", "-u", "neo4j", "-p", "password", "RETURN 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+
+  graph_worker:
+    build:
+      context: .
+      dockerfile: graph_worker/Dockerfile
+    ports:
+      - "8043:8000"
+    depends_on:
+      neo4j:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    environment:
+      - NEO4J_URI=bolt://neo4j:7687
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - OLLAMA_MODEL=${OLLAMA_MODEL_ORCHESTRATOR:-mistral}
+    networks:
+      - rag-network
+    restart: unless-stopped
+
+  orchestrator:
+    build:
+      context: .
+      dockerfile: orchestrator/Dockerfile
     ports:
       - "8040:8000"
     depends_on:
       - chromadb
+      - graph_worker
     extra_hosts:
       - "host.docker.internal:host-gateway"
     env_file:
@@ -34,6 +89,52 @@ services:
     environment:
       - CHROMA_HOST=chromadb
       - CHROMA_PORT=8000
+      - OLLAMA_MODEL=${OLLAMA_MODEL_ORCHESTRATOR:-mistral}
+      - NEO4J_URI=bolt://neo4j:7687
+    networks:
+      - rag-network
+    restart: unless-stopped
+
+  coding_agent:
+    build:
+      context: .
+      dockerfile: coding_agent/Dockerfile
+    ports:
+      - "8041:8000"
+    depends_on:
+      - chromadb
+      - graph_worker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    environment:
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - OLLAMA_MODEL=${OLLAMA_MODEL_CODING:-codellama}
+      - NEO4J_URI=bolt://neo4j:7687
+    networks:
+      - rag-network
+    restart: unless-stopped
+
+  research_agent:
+    build:
+      context: .
+      dockerfile: research_agent/Dockerfile
+    ports:
+      - "8042:8000"
+    depends_on:
+      - chromadb
+      - graph_worker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    env_file:
+      - .env
+    environment:
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - OLLAMA_MODEL=${OLLAMA_MODEL_RESEARCH:-mistral}
+      - NEO4J_URI=bolt://neo4j:7687
     networks:
       - rag-network
     restart: unless-stopped
@@ -46,7 +147,7 @@ services:
     ports:
       - "3010:3000"
     depends_on:
-      - api
+      - orchestrator
     networks:
       - rag-network
     restart: unless-stopped
