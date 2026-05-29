@@ -50,7 +50,9 @@ def extract_entities_and_relationships(
         # Strip any accidental markdown fences
         raw = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
         data = json.loads(raw)
+        if not isinstance(data, dict):
+            return [], []
         return data.get("entities", []), data.get("relationships", [])
-    except (httpx.HTTPError, json.JSONDecodeError, KeyError) as e:
+    except (httpx.HTTPError, json.JSONDecodeError, KeyError, AttributeError) as e:
         logger.warning("Entity extraction failed for chunk: %s", e)
         return [], []
